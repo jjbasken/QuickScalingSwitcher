@@ -53,7 +53,7 @@ class ScaleSwitcherToggle extends QuickMenuToggle {
     _init(onScaleSelected) {
         super._init({
             title: _('Display Scale'),
-            iconName: 'display-symbolic',
+            iconName: 'video-display-symbolic',
         });
 
         this._items = new Map();
@@ -86,7 +86,7 @@ class ScaleSwitcherIndicator extends SystemIndicator {
         super._init();
 
         this._indicator = this._addIndicator();
-        this._indicator.iconName = 'display-symbolic';
+        this._indicator.iconName = 'video-display-symbolic';
         this._indicator.visible = true;
 
         this._toggle = new ScaleSwitcherToggle(scale => this._applyScale(scale));
