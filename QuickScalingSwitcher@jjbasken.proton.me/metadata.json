@@ -3,6 +3,7 @@
   "description": "Quickly switch the scaling factor for the active monitor",
   "uuid": "QuickScalingSwitcher@jjbasken.proton.me",
   "shell-version": [
+    "49",
     "48"
   ]
 }
