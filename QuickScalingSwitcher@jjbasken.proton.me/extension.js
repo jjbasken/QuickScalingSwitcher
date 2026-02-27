@@ -85,10 +85,6 @@ class ScaleSwitcherIndicator extends SystemIndicator {
     _init() {
         super._init();
 
-        this._indicator = this._addIndicator();
-        this._indicator.iconName = 'video-display-symbolic';
-        this._indicator.visible = true;
-
         this._toggle = new ScaleSwitcherToggle(scale => this._applyScale(scale));
         this.quickSettingsItems.push(this._toggle);
 
