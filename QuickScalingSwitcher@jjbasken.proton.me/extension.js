@@ -145,11 +145,17 @@ class ScaleSwitcherIndicator extends SystemIndicator {
             }
             const [serial, monitors, logicalMonitors] = result;
 
-            // Build connector → current mode_id map from physical monitors
+            // Build connector → current mode_id and preserved properties map from physical monitors
             const connectorMode = new Map();
+            const connectorProps = new Map();
             for (const physMonitor of monitors) {
-                const [spec, modes] = physMonitor;
+                const [spec, modes, monitorProps] = physMonitor;
                 const [connector] = spec;
+                // Preserve display properties that ApplyMonitorsConfig accepts
+                const propsToPreserve = {};
+                if (monitorProps?.['color-mode'] !== undefined)
+                    propsToPreserve['color-mode'] = monitorProps['color-mode'];
+                connectorProps.set(connector, propsToPreserve);
                 for (const mode of modes) {
                     const [modeId, , , , , , modeProps] = mode;
                     const isCurrent = modeProps['is-current'];
@@ -172,7 +178,7 @@ class ScaleSwitcherIndicator extends SystemIndicator {
                 const [x, y, scale, transform, isPrimary, lmMonitors] = lm;
                 const isActiveMonitor = (x === geo.x && y === geo.y);
                 const inputMonitors = lmMonitors.map(([connector]) =>
-                    [connector, connectorMode.get(connector) ?? '', {}]);
+                    [connector, connectorMode.get(connector) ?? '', connectorProps.get(connector) ?? {}]);
                 return [x, y, isActiveMonitor ? newScale : scale, transform, isPrimary, inputMonitors];
             });
 
