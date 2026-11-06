@@ -24,6 +24,7 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {QuickMenuToggle, SystemIndicator} from 'resource:///org/gnome/shell/ui/quickSettings.js';
 
+const EXPERIMENTAL_FEATURES_KEY = 'experimental-features';
 const FRACTIONAL_SCALING_FEATURE = 'scale-monitor-framebuffer';
 
 // MetaLogicalMonitorLayoutMode
@@ -62,6 +63,10 @@ function unpackValue(value) {
 
 function formatScale(scale) {
     return `${Math.round(scale * 100)}%`;
+}
+
+function isFractional(scale) {
+    return Math.abs(scale - Math.round(scale)) > SCALE_EPSILON;
 }
 
 function connectorOf(logicalMonitor) {
@@ -163,9 +168,22 @@ class ScaleSwitcherIndicator extends SystemIndicator {
         this._proxy = null;
         this._monitorsChangedId = 0;
 
-        this._settings = new Gio.Settings({schema_id: 'org.gnome.mutter'});
-        this._settingsChangedId = this._settings.connect(
-            'changed::experimental-features', () => this._refreshState());
+        /*
+         * Fractional scaling stopped being experimental in mutter 50, and 51
+         * moved the flags that are left to their own org.gnome.mutter.experimental
+         * schema -- so org.gnome.mutter no longer defines experimental-features
+         * at all, and reading a key its schema lacks throws. Only keep the
+         * settings object on the releases where the key still exists.
+         */
+        this._settings = null;
+        this._settingsChangedId = 0;
+
+        const mutterSettings = new Gio.Settings({schema_id: 'org.gnome.mutter'});
+        if (mutterSettings.settings_schema.has_key(EXPERIMENTAL_FEATURES_KEY)) {
+            this._settings = mutterSettings;
+            this._settingsChangedId = this._settings.connect(
+                `changed::${EXPERIMENTAL_FEATURES_KEY}`, () => this._refreshState());
+        }
 
         this._toggle = new ScaleSwitcherToggle({
             onScaleSelected: scale => this._applyScale(scale),
@@ -225,7 +243,13 @@ class ScaleSwitcherIndicator extends SystemIndicator {
                 ? modes.get(connectorOf(active))?.[5] ?? []
                 : [];
 
-            this._toggle.setOptions(scales, !this._hasFractionalScaling());
+            // Mutter advertising a fractional scale is the authoritative sign
+            // that fractional scaling is usable, whichever gate -- if any --
+            // the running release puts in front of it.
+            const offerFractional =
+                !scales.some(isFractional) && this._canEnableFractionalScaling();
+
+            this._toggle.setOptions(scales, offerFractional);
             this._toggle.setCurrentScale(active ? active[2] : null);
         });
     }
@@ -379,9 +403,10 @@ class ScaleSwitcherIndicator extends SystemIndicator {
         return logicalMonitors.find(([x, y]) => x === geo.x && y === geo.y) ?? null;
     }
 
-    _hasFractionalScaling() {
-        return this._settings.get_strv('experimental-features')
-            .includes(FRACTIONAL_SCALING_FEATURE);
+    _canEnableFractionalScaling() {
+        return this._settings !== null &&
+            !this._settings.get_strv(EXPERIMENTAL_FEATURES_KEY)
+                .includes(FRACTIONAL_SCALING_FEATURE);
     }
 
     /*
@@ -390,12 +415,12 @@ class ScaleSwitcherIndicator extends SystemIndicator {
      * side effect of picking a scale.
      */
     _enableFractionalScaling() {
-        const features = this._settings.get_strv('experimental-features');
-        if (features.includes(FRACTIONAL_SCALING_FEATURE))
+        if (!this._canEnableFractionalScaling())
             return;
 
+        const features = this._settings.get_strv(EXPERIMENTAL_FEATURES_KEY);
         features.push(FRACTIONAL_SCALING_FEATURE);
-        this._settings.set_strv('experimental-features', features);
+        this._settings.set_strv(EXPERIMENTAL_FEATURES_KEY, features);
 
         Main.notify(_('Fractional scaling enabled'),
             _('Fractional scales are now available. On X11, log out and back in first.'));

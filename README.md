@@ -23,10 +23,11 @@ you regularly drop the scale to fit more on screen and put it back afterwards.
 
 ## Requirements
 
-- GNOME Shell 48 or 49. Developed and tested against 48.7.
-- Fractional scales additionally need mutter's `scale-monitor-framebuffer`
-  experimental feature (see [Fractional scaling](#fractional-scaling) below).
-  Integer scales work without it.
+- GNOME Shell 48 to 51. Developed against 48.7, verified against 51.1.
+- On GNOME 48 and 49, fractional scales additionally need mutter's
+  `scale-monitor-framebuffer` experimental feature (see
+  [Fractional scaling](#fractional-scaling) below). Integer scales work without
+  it. From GNOME 50 on, fractional scaling is always available.
 
 ## Install
 
@@ -64,10 +65,20 @@ actually produces a whole number of pixels at that resolution.
 
 ### Fractional scaling
 
-If fractional scaling is turned off, mutter only reports integer scales, so the
-menu is limited to those (typically 100% and 200%). An **Enable Fractional
-Scaling** entry appears at the bottom of the menu in that case; activating it adds
-`scale-monitor-framebuffer` to mutter's experimental features.
+Fractional scaling stopped being experimental in mutter 50, and GNOME 51 moved
+the remaining experimental flags to a separate `org.gnome.mutter.experimental`
+schema — so on GNOME 50 and later there is nothing to turn on and this section
+does not apply.
+
+On GNOME 48 and 49, if fractional scaling is turned off, mutter only reports
+integer scales, so the menu is limited to those (typically 100% and 200%). An
+**Enable Fractional Scaling** entry appears at the bottom of the menu in that
+case; activating it adds `scale-monitor-framebuffer` to mutter's experimental
+features.
+
+The extension decides whether to show that entry from whether mutter actually
+advertises a fractional scale, rather than from the shell version, so it stays
+correct however a given release or distribution gates the feature.
 
 This setting is global and the extension never changes it on its own — only when
 you pick that entry. It is not undone when you uninstall the extension. To turn
@@ -108,7 +119,9 @@ Two details are worth knowing if you are reading the code:
 ## Known limitations
 
 - Underscanning is not carried across a scale change; a monitor with
-  underscanning enabled will have it reset.
+  underscanning enabled will have it reset. The same applies to the RGB /
+  Broadcast range (`rgb-range`) that mutter reports from GNOME 51. Colour mode
+  (HDR) *is* preserved.
 - The layout repair shifts monitors past the rescaled one's right and bottom
   edges. That covers the usual side-by-side and stacked arrangements, but an
   unusual layout can still produce an arrangement mutter rejects, in which case
